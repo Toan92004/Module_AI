@@ -1,4 +1,6 @@
 import os
+import json
+import h5py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -11,30 +13,69 @@ import uvicorn
 app = FastAPI(title="AI Fire Warning - Dynamic N-Nodes")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-MODEL_PATH = "forecast_model.h5"  # ĐỔI LẠI THÀNH .H5
+MODEL_PATH = "forecast_model.h5"
 model = None
 
+# -------------------------------------------------------------
+# BÁC SĨ PHẪU THUẬT: SỬA LỖI CẤU TRÚC KERAS 3 -> KERAS 2
+# -------------------------------------------------------------
+def clean_frankenstein_model(filepath):
+    try:
+        with h5py.File(filepath, 'r+') as f:
+            if 'model_config' in f.attrs:
+                # Đọc cấu trúc JSON ẩn bên trong file H5
+                config_str = f.attrs['model_config']
+                if isinstance(config_str, bytes):
+                    config_str = config_str.decode('utf-8')
+                config_json = json.loads(config_str)
+                
+                # Quét qua từng Layer và gọt giũa các từ khóa lạ
+                layers = config_json.get('config', {}).get('layers', [])
+                for layer in layers:
+                    layer_config = layer.get('config', {})
+                    
+                    # 1. Chữa lỗi InputLayer (Đổi batch_shape thành batch_input_shape)
+                    if 'batch_shape' in layer_config:
+                        layer_config['batch_input_shape'] = layer_config.pop('batch_shape')
+                    layer_config.pop('optional', None)
+                    
+                    # 2. Chữa lỗi Dense layer (Xóa quantization_config)
+                    layer_config.pop('quantization_config', None)
+                        
+                # Lưu cấu trúc đã dọn sạch rác trở lại file H5
+                new_config_str = json.dumps(config_json).encode('utf-8')
+                f.attrs['model_config'] = new_config_str
+                print("-> [HỆ THỐNG] Đã phẫu thuật thành công cấu trúc file .h5!")
+    except Exception as e:
+        print("-> [HỆ THỐNG] Bỏ qua phẫu thuật do:", e)
+# -------------------------------------------------------------
+
+# Các biến môi trường khác của bạn
+MIN_VALUES = np.array([0.0, 0.0, 0.0, 0.0])
+MAX_VALUES = np.array([70.0, 100.0, 1000.0, 1000.0])
+TIME_STEPS = 12
+DELTA_AI_UPDATE_SEC = 900  
+
+node_buffers: Dict[str, deque] = {}
+last_30s_data: Dict[str, np.ndarray] = {}
+last_ai_update_time = time.time()
+
+# KHỞI ĐỘNG HỆ THỐNG THÔNG MINH
 @app.on_event("startup")
 async def load_ai_model():
     global model
     if os.path.exists(MODEL_PATH):
         print("-> [AI ENGINE] Đang nạp thư viện và bộ não AI, vui lòng đợi...")
+        
+        # 1. Gọi bác sĩ phẫu thuật dọn file trước
+        clean_frankenstein_model(MODEL_PATH)
+        
+        # 2. Bắt đầu lôi TensorFlow ra đọc (Lúc này file đã sạch sẽ hoàn toàn)
         import tensorflow as tf 
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         print("-> [AI ENGINE] Bộ não 4 biến (0-70°C) đã sẵn sàng!")
     else:
         print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.h5!")
-
-MIN_VALUES = np.array([0.0, 0.0, 0.0, 0.0])
-MAX_VALUES = np.array([70.0, 100.0, 1000.0, 1000.0])
-
-TIME_STEPS = 12
-DELTA_AI_UPDATE_SEC = 900  
-
-# --- THAY ĐỔI CỐT LÕI: TỪ ĐIỂN LƯU TRỮ ĐỘNG ---
-node_buffers: Dict[str, deque] = {}
-last_30s_data: Dict[str, np.ndarray] = {}
-last_ai_update_time = time.time()
 
 # ĐÃ SỬA LỖI: Loại bỏ hoàn toàn b_sen để đồng bộ với Node.js và phần cứng mạch Uno
 class NodeData(BaseModel):
