@@ -12,7 +12,7 @@ import uvicorn
 app = FastAPI(title="AI Fire Warning - Dynamic N-Nodes")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-MODEL_PATH = "forecast_model.h5"
+MODEL_PATH = "forecast_model.keras"
 model = None
 
 # Sự kiện chạy ngầm sau khi máy chủ đã mở cổng thành công

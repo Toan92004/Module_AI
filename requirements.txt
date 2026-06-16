@@ -1,13 +1,5 @@
-<<<<<<< HEAD
 fastapi
 uvicorn
 tensorflow-cpu
 numpy
 pydantic
-=======
-fastapi
-uvicorn
-tensorflow-cpu
-numpy
-pydantic
->>>>>>> 0965cc6fb6b4cfae2300e1eb615d90eec005635a
