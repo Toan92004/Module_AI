@@ -1,6 +1,5 @@
 fastapi
 uvicorn
 tensorflow-cpu
-tf-keras
 numpy
 pydantic

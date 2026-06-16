@@ -1,7 +1,4 @@
 import os
-# BẬT CHẾ ĐỘ TƯƠNG THÍCH KẾ THỪA CỦA TENSORFLOW NGAY TỪ ĐẦU
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
