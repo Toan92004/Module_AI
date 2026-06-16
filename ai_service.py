@@ -20,11 +20,15 @@ async def load_ai_model():
     if os.path.exists(MODEL_PATH):
         print("-> [AI ENGINE] Đang nạp thư viện và bộ não AI, vui lòng đợi...")
         
-        # BẢN VÁ CHO RENDER: Chuyển import vào đây để không chặn tiến trình mở cổng
+        # 1. BẬT CHẾ ĐỘ TƯƠNG THÍCH NGƯỢC (BẢN VÁ LỖI QUANTIZATION_CONFIG)
+        import os
+        os.environ["TF_USE_LEGACY_KERAS"] = "1"
+        
+        # 2. Lôi TensorFlow ra sau khi đã cài đặt xong môi trường
         import tensorflow as tf 
         
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        print("-> [AI ENGINE] Bộ não 4 biến (0-70°C) đã sẵn sàng!")
+        print("-> [AI ENGINE] Bộ脑 4 biến (0-70°C) đã sẵn sàng!")
     else:
         print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.keras!")
 
