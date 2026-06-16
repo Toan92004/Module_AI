@@ -17,35 +17,48 @@ MODEL_PATH = "forecast_model.h5"
 model = None
 
 # -------------------------------------------------------------
-# BÁC SĨ PHẪU THUẬT: SỬA LỖI CẤU TRÚC KERAS 3 -> KERAS 2
+# BÁC SĨ PHẪU THUẬT V2: QUÉT ĐỆ QUY & SỬA LỖI DTYPEPOLICY
 # -------------------------------------------------------------
 def clean_frankenstein_model(filepath):
+    import json
+    import h5py
     try:
         with h5py.File(filepath, 'r+') as f:
             if 'model_config' in f.attrs:
-                # Đọc cấu trúc JSON ẩn bên trong file H5
                 config_str = f.attrs['model_config']
                 if isinstance(config_str, bytes):
                     config_str = config_str.decode('utf-8')
                 config_json = json.loads(config_str)
                 
-                # Quét qua từng Layer và gọt giũa các từ khóa lạ
-                layers = config_json.get('config', {}).get('layers', [])
-                for layer in layers:
-                    layer_config = layer.get('config', {})
-                    
-                    # 1. Chữa lỗi InputLayer (Đổi batch_shape thành batch_input_shape)
-                    if 'batch_shape' in layer_config:
-                        layer_config['batch_input_shape'] = layer_config.pop('batch_shape')
-                    layer_config.pop('optional', None)
-                    
-                    # 2. Chữa lỗi Dense layer (Xóa quantization_config)
-                    layer_config.pop('quantization_config', None)
+                # Hàm đệ quy quét sâu vào mọi tầng cấu trúc
+                def fix_config(d):
+                    if isinstance(d, dict):
+                        # 1. Trị dứt điểm khối u DTypePolicy
+                        if d.get('class_name') == 'DTypePolicy' and 'config' in d:
+                            return d['config'].get('name', 'float32')
+                            
+                        new_d = {}
+                        for k, v in d.items():
+                            # 2. Vứt bỏ các thông số đời mới gây dị ứng
+                            if k in ['optional', 'quantization_config', 'registered_name', 'build_config', 'compile_config']:
+                                continue
+                            
+                            # 3. Chữa tên gọi batch_shape
+                            new_key = 'batch_input_shape' if k == 'batch_shape' else k
+                            new_d[new_key] = fix_config(v)
+                        return new_d
+                    elif isinstance(d, list):
+                        return [fix_config(i) for i in d]
+                    else:
+                        return d
                         
-                # Lưu cấu trúc đã dọn sạch rác trở lại file H5
+                # Áp dụng nội soi toàn bộ
+                config_json = fix_config(config_json)
+                
+                # Ghi đè lại file
                 new_config_str = json.dumps(config_json).encode('utf-8')
                 f.attrs['model_config'] = new_config_str
-                print("-> [HỆ THỐNG] Đã phẫu thuật thành công cấu trúc file .h5!")
+                print("-> [HỆ THỐNG] Đã phẫu thuật DTypePolicy & dọn rác .h5 thành công!")
     except Exception as e:
         print("-> [HỆ THỐNG] Bỏ qua phẫu thuật do:", e)
 # -------------------------------------------------------------
