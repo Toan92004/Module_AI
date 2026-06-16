@@ -1,10 +1,13 @@
+import os
+# BẬT CHẾ ĐỘ TƯƠNG THÍCH KẾ THỪA CỦA TENSORFLOW NGAY TỪ ĐẦU
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict
 import numpy as np
 from collections import deque
-import os
 import time
 import uvicorn
 
@@ -20,15 +23,11 @@ async def load_ai_model():
     if os.path.exists(MODEL_PATH):
         print("-> [AI ENGINE] Đang nạp thư viện và bộ não AI, vui lòng đợi...")
         
-        # 1. BẬT CHẾ ĐỘ TƯƠNG THÍCH NGƯỢC (BẢN VÁ LỖI QUANTIZATION_CONFIG)
-        import os
-        os.environ["TF_USE_LEGACY_KERAS"] = "1"
-        
-        # 2. Lôi TensorFlow ra sau khi đã cài đặt xong môi trường
+        # Chỉ lôi TensorFlow ra ngầm ở đây (Kỹ thuật tải lười)
         import tensorflow as tf 
         
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
-        print("-> [AI ENGINE] Bộ脑 4 biến (0-70°C) đã sẵn sàng!")
+        print("-> [AI ENGINE] Bộ não 4 biến (0-70°C) đã sẵn sàng!")
     else:
         print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.keras!")
 
