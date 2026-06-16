@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict
 import numpy as np
-import tensorflow as tf
 from collections import deque
 import os
 import time
@@ -15,16 +14,19 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 MODEL_PATH = "forecast_model.keras"
 model = None
 
-# Sự kiện chạy ngầm sau khi máy chủ đã mở cổng thành công
 @app.on_event("startup")
 async def load_ai_model():
     global model
     if os.path.exists(MODEL_PATH):
-        print("-> [AI ENGINE] Đang tiến hành nạp bộ não AI, vui lòng đợi...")
+        print("-> [AI ENGINE] Đang nạp thư viện và bộ não AI, vui lòng đợi...")
+        
+        # BẢN VÁ CHO RENDER: Chuyển import vào đây để không chặn tiến trình mở cổng
+        import tensorflow as tf 
+        
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         print("-> [AI ENGINE] Bộ não 4 biến (0-70°C) đã sẵn sàng!")
     else:
-        print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.h5!")
+        print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.keras!")
 
 MIN_VALUES = np.array([0.0, 0.0, 0.0, 0.0])
 MAX_VALUES = np.array([70.0, 100.0, 1000.0, 1000.0])
