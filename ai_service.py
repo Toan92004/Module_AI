@@ -11,7 +11,7 @@ import uvicorn
 app = FastAPI(title="AI Fire Warning - Dynamic N-Nodes")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-MODEL_PATH = "forecast_model.keras"
+MODEL_PATH = "forecast_model.h5"  # ĐỔI LẠI THÀNH .H5
 model = None
 
 @app.on_event("startup")
@@ -19,14 +19,11 @@ async def load_ai_model():
     global model
     if os.path.exists(MODEL_PATH):
         print("-> [AI ENGINE] Đang nạp thư viện và bộ não AI, vui lòng đợi...")
-        
-        # Chỉ lôi TensorFlow ra ngầm ở đây (Kỹ thuật tải lười)
         import tensorflow as tf 
-        
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         print("-> [AI ENGINE] Bộ não 4 biến (0-70°C) đã sẵn sàng!")
     else:
-        print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.keras!")
+        print("-> [AI ENGINE] CẢNH BÁO: Không tìm thấy file forecast_model.h5!")
 
 MIN_VALUES = np.array([0.0, 0.0, 0.0, 0.0])
 MAX_VALUES = np.array([70.0, 100.0, 1000.0, 1000.0])
